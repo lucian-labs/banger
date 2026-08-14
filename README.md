@@ -1,13 +1,13 @@
 # Is it a banger?
 
+**[Live demo →](https://banger.lucianlabs.ca)** · [npm](https://www.npmjs.com/package/@dank-inc/banger) · [all packages](https://lucianlabs.ca/packages/)
+
 answer. yes.
 
 This is a WebAudio API library written with Typescript
 
 infinite polyphony!
 randomized sounds!
-
-[live demo](https://banger.elijahlucian.ca/) 🔊🔥🔥🔥
 
 # Usage
 
