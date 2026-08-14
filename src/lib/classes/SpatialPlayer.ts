@@ -5,15 +5,35 @@ import { clamp } from '../utils'
 import { Banger, BangerParams } from './Banger'
 import { Looper, LooperParams } from './Looper'
 
-type SpatialAudioParams = (BangerParams | LooperParams) & {
+export type SpatialAudioParams = (BangerParams | LooperParams) & {
   worldPosition?: SpatialVec3
   audibleDistance?: number
   orientation?: SpatialVec3
 }
 
-type Constructor<T> = new (...params: (any & SpatialAudioParams)[]) => T
+/** What the mixin adds on top of the player it wraps. */
+export interface SpatialFeatures {
+  worldPosition: SpatialVec3
+  audibleDistance: number
+  orientation?: SpatialVec3
+  setWorldPosition: (position: SpatialVec3) => void
+  setOrientation: (orientation: SpatialVec3) => void
+  setSpatialValues: (
+    listenerAngle: number,
+    distance?: number,
+    obstacles?: boolean,
+  ) => void
+  get3DValues: (
+    listenerPosition: SpatialVec3,
+    listenerOrientation: SpatialVec3,
+  ) => [listenerAngle: number, distance: number, degrees: number]
+}
+
+type Constructor<T> = new (...params: any[]) => T
 
 export function SpatialPlayer<T extends Constructor<Banger>>(Base: T) {
+  // TS requires a mixin constructor to be `...args: any[]`; the exported
+  // SpatialBanger/SpatialLooper below give consumers the real signature back
   return class extends Base {
     worldPosition: SpatialVec3
     audibleDistance: number
@@ -74,7 +94,12 @@ export function SpatialPlayer<T extends Constructor<Banger>>(Base: T) {
   }
 }
 
-export const SpatialLooper = SpatialPlayer(Looper)
-export const SpatialBanger = SpatialPlayer(Banger)
+export const SpatialLooper: new (
+  params: SpatialAudioParams,
+) => Looper & SpatialFeatures = SpatialPlayer(Looper)
+
+export const SpatialBanger: new (
+  params: SpatialAudioParams,
+) => Banger & SpatialFeatures = SpatialPlayer(Banger)
 
 // export class Banger3D extends SpatialPlayer(Banger)

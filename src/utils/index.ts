@@ -1,4 +1,4 @@
-import { IBanger, SpatialPlayer } from '../lib'
+import { IBanger } from '../lib'
 
 export const makeButton = (
   el: HTMLElement,

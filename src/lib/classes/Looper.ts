@@ -16,87 +16,77 @@ export class Looper extends Banger {
    * For short sounds, use Banger
    */
   constructor(params: LooperParams) {
-    super(params)
-    this.loop = true
+    // loops by default, but `loop: false` is honoured
+    super({ ...params, loop: params.loop ?? true })
     this.paused = false
-    this.pausedAt = 0
+    this.pausedAt = this.startTime
     this.startedAt = 0
   }
 
   get state() {
+    const duration = this.source?.buffer?.duration ?? 0
+    // ctx.currentTime is the context clock, not the playhead - startedAt is the
+    // track's virtual zero
+    const position = this.playing
+      ? this.ctx.currentTime - this.startedAt
+      : this.pausedAt
+
     return {
       playing: this.playing,
       startedAt: this.startedAt,
       gain: this.gainNode,
       pan: this.panNode,
       pausedAt: this.pausedAt,
-      length: this.source?.buffer?.duration,
+      length: duration,
       state: this.ctx.state,
       bufferLength: this.source?.buffer?.length,
-      timeLength: this.source?.loopEnd,
+      timeLength: duration,
       currentTime: this.ctx.currentTime,
-      u: this.ctx.currentTime / (this.source?.buffer?.duration || 1),
+      position,
+      u: duration ? (position % duration) / duration : 0,
     }
-  }
-
-  setPan = (value: number) => {
-    // console.log('looper> pan', value)
-    this.handlePan(value)
-  }
-  setVolume = (value: number) => this.handleVolume(value)
-
-  loadSource = () => {
-    if (!this.audioBuffer) {
-      this.onFail('No audio buffer')
-      return
-    }
-    this.loading = true
-    this.source = null
-    this.source = this.ctx.createBufferSource()
-    this.source.buffer = this.audioBuffer
-
-    this.source.addEventListener('ended', () => {
-      this.playing = false
-      this.onEnded?.()
-      this.loadSource()
-    })
-
-    this.source
-      .connect(this.gainNode)
-      .connect(this.panNode)
-      .connect(this.filterNode)
-      .connect(this.ctx.destination)
-    this.source.loop = !!this.loop
-    this.loading = false
   }
 
   pause = () => {
     if (!this.playing) return
 
+    this.manualStop = true
+    this.pausedAt = this.ctx.currentTime - this.startedAt
     this.handlePause()
+    this.playing = false
     this.paused = true
-    this.pausedAt += this.ctx.currentTime - this.startedAt
-    this.loadSource()
+    this.loadSource() // the stopped node cannot be started again
+    this.onEnded?.(`paused -> ${this.name}`, true)
   }
 
   stop = () => {
-    if (!this.playing) return
+    const wasActive = this.playing || this.paused
 
+    this.manualStop = true
     this.handleStop()
+    this.paused = false
+    this.pausedAt = this.startTime
+    this.startedAt = 0
     this.loadSource()
+    if (wasActive) this.onEnded?.(`stopped -> ${this.name}`, true)
   }
 
   play = () => {
-    if (!this.playing || this.paused) {
-      this.handlePlay(this.pausedAt)
-      this.paused = false
-      this.startedAt = this.ctx.currentTime - this.pausedAt
-      return
+    // a single looper gets one run - it never restarts a live voice and never
+    // replaces a spent one, so pause() ends up as final as stop()
+    if (this.single && this.started) return
+
+    if (this.playing || this.started) {
+      // a voice is running (restart) or the last one is spent - either way the
+      // node has to be replaced, and neither case is a resume
+      this.handleStop()
+      this.pausedAt = this.startTime
+      this.loadSource()
     }
 
-    this.handleStop()
-    this.loadSource()
-    this.handlePlay()
-    this.startedAt = this.ctx.currentTime
+    this.manualStop = false
+    this.handlePlay(this.pausedAt)
+    this.paused = false
+    this.startedAt = this.ctx.currentTime - this.pausedAt
   }
 }

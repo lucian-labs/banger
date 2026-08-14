@@ -1,16 +1,10 @@
 /* banger demo — https://banger.lucianlabs.ca
  *
- * Two things about the published library shape this page:
- *
- *  - Every Player subclass constructs its OWN `new AudioContext()`. Browsers
- *    start those suspended until a gesture and cap how many can exist, so this
- *    demo resumes each instance's ctx on first interaction and builds at most
- *    three instances.
- *  - Only Looper wires filterNode into the graph; Banger and MultiBanger
- *    connect source → gain → pan → destination, so handleCutoff is inert on
- *    them. The cutoff control is therefore offered on the looper only.
- *
- * Both are recorded in the review.
+ * Every player here shares the one AudioContext the library keeps, and the
+ * library resumes it on the first play() — so nothing on this page has to
+ * babysit the gesture-unlock dance. Every player also shares one graph shape
+ * (source → gain → pan → filter → destination), so the cutoff control works
+ * on any of them.
  */
 
 import { Banger, MultiBanger, Looper, getWav, getWavs } from '@dank-inc/banger'
@@ -55,12 +49,6 @@ const TRACK = 'audio/eli7vh-tezos-till-i-bezos-final.wav'
 
 const noop = () => {}
 const fail = (msg: string) => console.warn('[banger]', msg)
-
-/** Every Player builds its own AudioContext in the constructor, before any
- *  gesture has happened, so it is born suspended. Resume it on interaction. */
-const wake = (p: { ctx: AudioContext }) => {
-  if (p.ctx.state === 'suspended') p.ctx.resume()
-}
 
 waveloop.ready().then(boot)
 
@@ -167,7 +155,6 @@ function oneShotSection() {
     pad.addEventListener('click', () => {
       const b = bangers[name]
       if (!b) return
-      wake(b)
       apply(b)
       b.play()
     })
@@ -193,7 +180,7 @@ function bankSection() {
       'p',
       'wl-muted',
       'One instance, many buffers, a random pick per hit — and unlike Banger it ' +
-        'overlaps, so you can machine-gun it. There is no stop control by design.'
+        'overlaps, so you can machine-gun it. stop() cuts every live voice at once.'
     )
   )
 
@@ -220,7 +207,11 @@ function bankSection() {
   roll.style.fontSize = '1.2rem'
   roll.disabled = true
 
-  inner.append(hit, roll)
+  const cut = h('button', 'wl-btn wl-btn--ghost', 'stop')
+  cut.style.fontSize = '1.2rem'
+  cut.disabled = true
+
+  inner.append(hit, roll, cut)
 
   const controls = h('div', 'wl-grid')
   controls.style.marginTop = '0.75rem'
@@ -243,6 +234,7 @@ function bankSection() {
       onLoaded: () => {
         hit.disabled = false
         roll.disabled = false
+        cut.disabled = false
         hud.setAttribute('tr', `${buffers.length} BUFFERS`)
       },
       onEnded: noop,
@@ -251,7 +243,6 @@ function bankSection() {
 
   const strike = () => {
     if (!bank) return
-    wake(bank)
     bank.setVolume(vol.value)
     bank.setPan(pan.value)
     bank.drift = drift.value
@@ -264,6 +255,10 @@ function bankSection() {
   roll.addEventListener('click', () => {
     for (let i = 0; i < 12; i++) setTimeout(strike, i * 70)
   })
+  cut.addEventListener('click', () => {
+    bank?.stop()
+    hud.setAttribute('br', `${hits} HITS · CUT`)
+  })
 }
 
 /* ── Looper — the track ─────────────────────────────────────────────────── */
@@ -274,10 +269,10 @@ function looperSection() {
     h(
       'p',
       'wl-muted',
-      'A Banger that loops and remembers where it was. This is the one player ' +
-        'whose graph includes the filter node, so the cutoff below is live. The ' +
-        'scope is an analyser tapped off the looper’s own pan node, and it ' +
-        'drives the wordmark at the top of the page.'
+      'A Banger that loops and remembers where it was — pause resumes exactly ' +
+        'where it left off, stop rewinds. The scope is an analyser tapped off ' +
+        'the looper’s own pan node, and it drives the wordmark at the top of ' +
+        'the page.'
     )
   )
 
@@ -361,7 +356,6 @@ function looperSection() {
 
   playBtn.addEventListener('click', () => {
     if (!looper) return
-    wake(looper)
     looper.play()
     hud.setAttribute('bl', 'PLAYING')
   })
@@ -395,13 +389,14 @@ function apiSection() {
   s.append(api)
   ;(api as HTMLElement & { rows: unknown }).rows = [
     { name: 'Banger', kind: 'class', signature: '(params: BangerParams) => Banger', about: 'Single-voice one-shot. play() is ignored while it is already sounding.' },
-    { name: 'MultiBanger', kind: 'class', signature: '(params: MultiBangerProps) => MultiBanger', about: 'Sample bank; each play() picks a random buffer and overlaps. No stop control.' },
-    { name: 'Looper', kind: 'class', signature: '(params: LooperParams) => Looper', about: 'Looping player with pause/resume position. The only player whose graph includes filterNode.' },
+    { name: 'MultiBanger', kind: 'class', signature: '(params: MultiBangerProps) => MultiBanger', about: 'Sample bank; each play() picks a random buffer and overlaps. stop() cuts every voice.' },
+    { name: 'Looper', kind: 'class', signature: '(params: LooperParams) => Looper', about: 'Looping player with pause/resume position. loop: false is honoured.' },
     { name: 'SpatialBanger / SpatialLooper', kind: 'class', signature: 'SpatialPlayer(Base)', about: 'Mixin adding PannerNode positioning to a player.' },
     { name: '.play / .stop / .pause', kind: 'method', signature: '() => void', about: 'Transport. pause() is Looper only.' },
+    { name: '.dispose', kind: 'method', signature: '() => void', about: 'Stops the player and disconnects its nodes from the shared context.' },
     { name: '.handleVolume / .setVolume', kind: 'method', signature: '(value: number) => void', about: 'Sets gainNode.gain, clamped at zero.' },
     { name: '.handlePan / .setPan', kind: 'method', signature: '(value: number) => void', about: 'Sets panNode.pan, -1 to 1.' },
-    { name: '.handleCutoff', kind: 'method', signature: '(hz: number, q?: number) => void', about: 'Sets the biquad lowpass. Audible on Looper only.' },
+    { name: '.handleCutoff', kind: 'method', signature: '(hz: number, q?: number) => void', about: 'Sets the biquad lowpass. Every player routes through it.' },
     { name: '.drift', kind: 'property', signature: 'number', about: 'Cents of random detune applied per play().' },
     { name: '.playbackRate', kind: 'property', signature: 'number', about: 'Rate multiplier applied per play().' },
     { name: '.ctx / .gainNode / .panNode / .filterNode', kind: 'property', signature: 'Web Audio nodes', about: 'Public, so you can tap or extend the graph yourself.' },
