@@ -27,7 +27,9 @@
     "lint": "tsc --noEmit",
     "compile": "rm -rf lib && tsc",
     "deploy": "npm run compile && npm publish",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "demo": "vite --config vite.demo.config.ts",
+    "demo:build": "vite build --config vite.demo.config.ts"
   },
   "devDependencies": {
     "typescript": "^5.7.2",

@@ -3,3 +3,5 @@
 /dist
 .parcel-cache
 /tmp
+node_modules
+demo/dist

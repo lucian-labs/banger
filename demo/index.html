@@ -1,89 +1,26 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <link rel="stylesheet" href="style.css" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Banger.js</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>banger — @dank-inc/banger</title>
+    <meta
+      name="description"
+      content="Interactive demo of @dank-inc/banger — Web Audio sample players: one-shots, sample banks and loopers, with gain, pan, drift and rate."
+    />
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="https://ds.lucianlabs.ca/waveloop.css" />
+    <script type="module" src="https://ds.lucianlabs.ca/waveloop.js"></script>
   </head>
   <body>
-    <div id="audio">
-      <p>Assets go here!</p>
-      <audio id="tezos" src="audio/eli7vh-tezos-till-i-bezos-final.wav"></audio>
-      <audio id="drawing" src="audio/drawing.wav"></audio>
-    </div>
-    <div id="visuals">
-      <h3>Banger.js</h3>
-      <div id="debug-template" class="debug-container">
-        <div class="debug-name"></div>
-        <div class="debug-value"></div>
-      </div>
-      <div id="debug">
-        <div id="manual">
-          <span>click: move source</span>
-          <span>ctrl+click: move lis</span>
-          <span>shift+click: rotate lis</span>
-        </div>
-      </div>
-      <canvas id="viz"></canvas>
-      <div id="root"></div>
-    </div>
-    <div id="controls">
-      <h3>Looping Song W/ Controls</h3>
-      <div id="buttons">
-        <button id="reverse">Reverse</button>
-        <button id="stop">Stop</button>
-        <button id="pause">Pause</button>
-        <button id="play">Play</button>
-        <button id="state">state</button>
-      </div>
-      <div id="sliders">
-        <div>
-          <label for="volume">Volume</label>
-          <input
-            type="range"
-            name="volume"
-            id="volume"
-            min="0"
-            max="2"
-            value="1"
-            step="0.01"
-            data-action="volume"
-          />
-        </div>
-        <div>
-          <label for="pan">Pan</label>
-          <input
-            type="range"
-            name="pan"
-            id="pan"
-            value="0"
-            min="-1"
-            step="0.05"
-            max="1"
-            data-action="pan"
-          />
-        </div>
-        <div>
-          <label for="pitch">Pitch</label>
-          <input
-            type="range"
-            name="pitch"
-            id="pitch"
-            min="0"
-            step="0.05"
-            max="2"
-            data-action="pitch"
-          />
-        </div>
-      </div>
-      <h3>Single Shot Sounds</h3>
-      <div id="drums"></div>
-      <h3>Looping Sfx Sounds (toggle)</h3>
-      <div id="loopingsfx"></div>
-    </div>
-
-    <script src="index.ts" type="module"></script>
+    <wl-demo
+      sub="banger"
+      version="0.15.1"
+      accent="gold"
+      tagline="Web Audio sample players with the boilerplate gone: one-shots, sample banks and loopers, each with gain, pan, pitch drift and playback rate."
+    >
+      <div id="app"></div>
+    </wl-demo>
+    <script type="module" src="./main.ts"></script>
   </body>
 </html>
